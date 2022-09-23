@@ -1,0 +1,172 @@
+#include <Adafruit_HMC5883_U.h>
+
+/*
+ * Credits:
+ * Coded by Abdullah Al Mahmud Ganja(Team Zero)
+ * Libraries:
+ * HC-SR04-NewPing.ino
+ * 
+*/
+
+#include "NewPing.h"
+
+// defining all the I/O
+#define tra1 12 // right sonar
+#define tra2 13 // left sonar
+#define tra3 11 // front sonar
+#define rec1 12 // right sonar
+#define rec2 13 // left sonar
+#define rec3 11 // front sonar
+#define maxd 400 // maximum distance measured by sonar
+#define moto_en 10 // enable line for motor (pwm) - !be sure to connect it to pwm pin
+#define moto_in1 8 // front moving input line
+#define moto_in2 9 // backward moving input line
+#define steer_in1 7 // right moving input line
+#define steer_in2 6 // left moving input line
+#define S0 1
+#define S1 2
+#define S2 3
+#define S3 4
+#define sout 5
+#define S Serial // Just for the sake of shortening the code
+#define maxx 100000
+
+//Initializing the sonar
+NewPing right_sonar(tra1, rec1, maxd);
+NewPing left_sonar(tra2, rec2, maxd);
+NewPing front_sonar(tra3, rec3, maxd);
+
+// Defining Variables
+float right_dis = 0, left_dis = 0, front_dis = 0;
+
+void setup(){
+  // Setting all the input and output I/O
+  pinMode(moto_en, OUTPUT);
+  pinMode(moto_in1, OUTPUT);
+  pinMode(moto_in2, OUTPUT);
+  pinMode(steer_in1, OUTPUT);
+  pinMode(steer_in2, OUTPUT);
+ 
+//  pinMode(S0, OUTPUT);
+//  pinMode(S1, OUTPUT);
+//  pinMode(S2, OUTPUT);
+//  pinMode(S3, OUTPUT);
+//  pinMode(sout, INPUT);
+  
+  // Setting frequency-scaling to 20% for color sensor
+//  digitalWrite(S0,HIGH);
+//  digitalWrite(S1,LOW);
+  S.begin(9600);
+}
+
+void loop(){
+  delay(10);
+
+  // finding distance using the library
+  right_dis = right_sonar.ping_cm();
+  if(!right_dis) right_dis = maxx;
+  left_dis = left_sonar.ping_cm();
+  if(!left_dis) left_dis = maxx;
+  front_dis = front_sonar.ping_cm();
+  if(!front_dis) front_dis = maxx;
+  
+
+//   printing values just for the sake of testing
+  S.print("Right Distance: " + String(right_dis) + "  ");
+  S.print("Left Distance: " + String(left_dis) + "  ");
+  S.print("Front Distance: " + String(front_dis) + "  ");
+////  if(dcolor()){
+////    S.print("blue");
+////  } else { 
+////    S.print("not blue");
+////  }
+  S.print("\n");
+
+  if(front_dis < 15 && front_dis != 0) estop();
+  else forward();
+//  delay(3000);
+//  estop();
+//  delay(3000);
+//  forward();
+//  deviated(true);
+//  delay(3000);
+//  backward();
+//  deviated(false);
+//  delay(3000);
+//  estop();
+  
+
+  if(abs(right_dis - left_dis) > 30){
+    deviated(right_dis > left_dis);
+  }
+  //moving the car straight if the other condition is not met
+  else straight();
+    
+}
+
+// this will move the car forward in the mentioned speed
+void forward(){
+  digitalWrite(moto_in1, HIGH);
+  digitalWrite(moto_in2, LOW);
+  analogWrite(moto_en, 255); // set speed of the car from 0~255 according to the given parameter
+}
+
+// this will move the car backward in the mentioned speed
+void backward(){
+  digitalWrite(moto_in1, LOW);
+  digitalWrite(moto_in2, HIGH);
+  analogWrite(moto_en, 255); // set speed of the car from 0~255 according to the given parameter
+}
+
+// this will stop the car immediately
+void estop(){
+  digitalWrite(moto_in1, LOW);
+  digitalWrite(moto_in2, HIGH);
+  delay(100);
+  analogWrite(moto_en, 0); // set speed of the car to 0
+}
+
+// this stop is for the end of the game
+void gstop(){
+  delay(1000);
+  digitalWrite(moto_in1, LOW);
+  digitalWrite(moto_in2, LOW);
+  analogWrite(moto_en, 0); // set speed of the car to 0
+}
+
+// this will move the car straight
+void straight(){
+  digitalWrite(steer_in1, LOW);
+  digitalWrite(steer_in2, LOW);
+}
+
+
+// this will move the car to the right or left in the mentioned side
+void deviated(bool r){
+  if(r){
+    digitalWrite(steer_in1, HIGH);
+    digitalWrite(steer_in2, LOW);
+    }
+  else{
+    digitalWrite(steer_in1, LOW);
+    digitalWrite(steer_in2, HIGH);
+    }
+}
+
+
+bool dcolor(){
+  // Setting Blue filtered photodiodes to be read
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,HIGH);
+  // Reading the output frequency
+  int bluefrequency = 0;
+  bluefrequency = pulseIn(sout, LOW);
+  S.print("\n");
+  S.print(bluefrequency);
+  S.print("  ");
+
+  if (bluefrequency>25 && bluefrequency< 77){
+    return true;
+  }
+  return false;
+}
